@@ -1,0 +1,2585 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Carbontrace Admin & REST API",
+    "version": "1.0.0",
+    "description": "\n### Carbontrace API & Modular Documentation\n\nThis documentation covers all active REST API endpoints, web view renders, and SDK integration interfaces for Carbontrace Admin.\n\n#### Navigation & Categorization:\n- 🌐 **[Main Admin & REST APIs](/api-docs)**: Documented under `/api-docs` (modular tags for Auth, Sales, Billing, Accounts, Wallet, Rewards, etc.).\n- 📦 **[CT-SDK & Public Integration APIs](/api-docs/sdk)**: Documented separately under `/api-docs/sdk` for client SDKs and public webhooks.\n- 🎨 **[Web Views (EJS Renders)](/api-docs#/Web%20Views%20(EJS%20Renders))**: Documented under the `Web Views (EJS Renders)` tag to distinguish server-rendered pages from pure REST APIs.\n",
+    "contact": {
+      "name": "CarbonTrace Team",
+      "email": "support@carbontrace.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current Host Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Pass JWT token in header: Authorization: Bearer <JWT>"
+      },
+      "CookieSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session",
+        "description": "Session cookie for authenticated web app users"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Error message details"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 100
+          },
+          "pages": {
+            "type": "integer",
+            "example": 5
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "CookieSession": []
+    },
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication, JWT login for APIs, and web session management"
+    },
+    {
+      "name": "Sales Register & Orders",
+      "description": "Sales registration, order journey tracking, and time-series statistics"
+    },
+    {
+      "name": "Billing & Invoicing",
+      "description": "Client billing management, aging reports, invoice issuance, payments, and PDF/Excel exports"
+    },
+    {
+      "name": "Accounts & Client Management",
+      "description": "Overview KPIs, client listing, account updates, billing ledger, transaction auditing, and API secret token regeneration"
+    },
+    {
+      "name": "Wallet & Blockchain",
+      "description": "Algorand wallet creation, connection, sessions, balances, opt-in transactions, and transaction metadata"
+    },
+    {
+      "name": "CTCoins (ASA)",
+      "description": "Algorand Standard Asset (ASA) creation, coin transfers, client redemptions, and asset expiry tracking"
+    },
+    {
+      "name": "Redemption Engine",
+      "description": "Previewing token redemption, checking eligibility, and performing calculation models"
+    },
+    {
+      "name": "Reward Distribution",
+      "description": "Client reward engine initialization, balance lookup, claiming rewards to wallet, and public reward redemption flows"
+    },
+    {
+      "name": "Projects",
+      "description": "Listing active/available carbon offset projects and detailed project breakdowns for SDKs"
+    },
+    {
+      "name": "Carbon Calculation",
+      "description": "Carbon offset charges and footprint cost estimation engine"
+    },
+    {
+      "name": "Notifications",
+      "description": "User notifications, read status management, and event alerts"
+    },
+    {
+      "name": "Inquiry Management",
+      "description": "Public contact submissions, lead processing, inquiry status updates, and conversion to client accounts"
+    },
+    {
+      "name": "System, Settings & Logs",
+      "description": "Health checks, Razorpay webhooks, email delivery logs, system execution logs, and admin settings APIs"
+    },
+    {
+      "name": "Web Views (EJS Renders)",
+      "description": "Server-side HTML view routes rendered via EJS templates (for legacy web frontend)"
+    }
+  ],
+  "paths": {
+    "/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Web Session Login",
+        "description": "Authenticates web user and establishes cookie session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "admin@carbontrace.io"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "password123"
+                  },
+                  "rememberMe": {
+                    "type": "string",
+                    "example": "on"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "admin@carbontrace.io"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/api/v1/login": {
+      "post": {
+        "tags": [
+          "Authentication",
+          "CT-SDK Integrations"
+        ],
+        "summary": "API / SDK JWT Login",
+        "description": "Returns JWT token for SDK client authentication and external integrations",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "client@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "secretpassword"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful, returns JWT token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "token": {
+                      "type": "string",
+                      "example": "eyJhbGciOiJIUzI1Ni..."
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "client"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid email or password"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Web Session Logout",
+        "description": "Clears user session cookie and redirects to login page",
+        "responses": {
+          "302": {
+            "description": "Redirect to /login"
+          }
+        }
+      }
+    },
+    "/api/v1/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "API Logout",
+        "description": "Terminates active session cookie for API clients",
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/salesRegisters": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "List Paginated Sales Registers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Items per page"
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter start date (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter end date (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search order ID or client name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of sales registers"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Sales Register & Orders",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Register New Sale (Core SDK Intake)",
+        "description": "Registers a new sale order and triggers offset calculation & reward distribution",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "client_id",
+                  "sale_order_id",
+                  "project_ids"
+                ],
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "example": "66b1a23c4d..."
+                  },
+                  "sale_order_id": {
+                    "type": "string",
+                    "example": "SO-2026-001"
+                  },
+                  "project_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "PROJ-101"
+                    ]
+                  },
+                  "carbon_footprint": {
+                    "type": "number",
+                    "example": 500
+                  },
+                  "sale_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sale registered successfully"
+          },
+          "400": {
+            "description": "Missing required parameters"
+          }
+        }
+      }
+    },
+    "/api/v1/salesRegisters/client/{clientId}": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Sales Registers by Client ID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Client MongoDB ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sales registers for specified client"
+          }
+        }
+      }
+    },
+    "/api/v1/salesRegisters/{id}": {
+      "put": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Update Sales Register Entry (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "example": "Adjusted"
+                  },
+                  "carbon_footprint": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sales register updated"
+          }
+        }
+      }
+    },
+    "/api/v1/salesRegisters/stats": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Time-Series Chart Statistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "schema": {
+              "type": "integer",
+              "default": 30
+            },
+            "description": "Range in days"
+          },
+          {
+            "in": "query",
+            "name": "groupBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "day",
+                "month"
+              ],
+              "default": "day"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time-series labels and values"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Dashboard Summary KPIs",
+        "responses": {
+          "200": {
+            "description": "Aggregated metrics for projects, clients, orders, wallets, notifications"
+          }
+        }
+      }
+    },
+    "/api/v1/counts": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Compact Summary Counts for Badges/Sidebar",
+        "responses": {
+          "200": {
+            "description": "Quick count overview"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/adjusted": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Decoupled Adjusted Orders (JSON API)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decoupled adjusted order journey list with transactions"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/pending": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Decoupled Pending Orders (JSON API)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decoupled pending order journey list"
+          }
+        }
+      }
+    },
+    "/api/v1/orders/failed-ucr": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get Decoupled Failed UCR Orders (JSON API)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Decoupled failed UCR lots and order details"
+          }
+        }
+      }
+    },
+    "/api/v1/lots/{lotId}": {
+      "get": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Get UCR Lot Breakdown & Audit Details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lotId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sale_order_id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed UCR lot status, sales, and retry logs"
+          }
+        }
+      }
+    },
+    "/api/v1/ucr/failed-lots/{lotId}/retry": {
+      "post": {
+        "tags": [
+          "Sales Register & Orders"
+        ],
+        "summary": "Retry Failed UCR Lot (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lotId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lot reassigned to worker queue"
+          }
+        }
+      }
+    },
+    "/api/v1/billing": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "List Billings (Admin & Client)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "clientId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by Client MongoDB ID"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter status (Draft, Issued, Paid, Overdue)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of client billing records"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/aging": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "List Aging Billings Report",
+        "responses": {
+          "200": {
+            "description": "Aging billings breakdown"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Get Billing Details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single billing record details"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}/issue": {
+      "post": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Issue Invoice (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice issued"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}/pay": {
+      "post": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Mark Invoice Paid (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice marked as paid"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}/send-reminder": {
+      "post": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Send Payment Reminder Email (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment reminder email sent"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}/export/excel": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Export Billing Excel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excel binary file download"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/{id}/download-invoice": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing"
+        ],
+        "summary": "Download Invoice PDF",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF binary file download"
+          }
+        }
+      }
+    },
+    "/api/v1/public/billing/{token}": {
+      "get": {
+        "tags": [
+          "Billing & Invoicing",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Get Public Billing Details via Token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public billing details"
+          }
+        }
+      }
+    },
+    "/api/v1/public/billing/{token}/razorpay-order": {
+      "post": {
+        "tags": [
+          "Billing & Invoicing",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Create Public Razorpay Payment Order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Razorpay order object"
+          }
+        }
+      }
+    },
+    "/api/v1/public/billing/{token}/verify-payment": {
+      "post": {
+        "tags": [
+          "Billing & Invoicing",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Verify Public Razorpay Payment Signature",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "razorpay_order_id",
+                  "razorpay_payment_id",
+                  "razorpay_signature"
+                ],
+                "properties": {
+                  "razorpay_order_id": {
+                    "type": "string"
+                  },
+                  "razorpay_payment_id": {
+                    "type": "string"
+                  },
+                  "razorpay_signature": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment verified successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/overview": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Get Global Accounts Overview KPIs",
+        "responses": {
+          "200": {
+            "description": "Overall accounts metrics"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/clients": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "List Clients (Paginated + Search)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of client accounts"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/clients/{clientId}/summary": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Get Client Summary KPIs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client summary metrics"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/clients/{clientId}/billing-ledger": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Get Client Billing Ledger",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client billing ledger entries"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/clients/{clientId}/billing-ledger/export": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Export Client Billing Ledger Excel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Excel binary file download"
+          }
+        }
+      }
+    },
+    "/api/v1/accounts/audit/confirmed-transactions": {
+      "get": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Confirmed Transaction Audit Report",
+        "responses": {
+          "200": {
+            "description": "Confirmed transaction audit log"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}": {
+      "put": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Update Client Profile (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "contactNumber": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Delete Client Profile (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/regenerate-token": {
+      "post": {
+        "tags": [
+          "Accounts & Client Management"
+        ],
+        "summary": "Regenerate Client API Secret Token (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New API secret generated"
+          }
+        }
+      }
+    },
+    "/api/v1/createAccount": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Create New Algorand Wallet Account (Admin)",
+        "responses": {
+          "200": {
+            "description": "New wallet account created with mnemonic and address"
+          }
+        }
+      }
+    },
+    "/api/v1/connect-wallet": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Connect Existing Wallet to Profile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "wallet_address"
+                ],
+                "properties": {
+                  "wallet_address": {
+                    "type": "string",
+                    "example": "K27..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet connected"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet-balance": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Get Wallet Balance (ALGO + CTCoins)",
+        "responses": {
+          "200": {
+            "description": "Wallet ALGO balance and CTCoins holdings"
+          }
+        }
+      }
+    },
+    "/api/v1/getwalletdetails": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Get Connected Wallet Profile Details",
+        "responses": {
+          "200": {
+            "description": "Wallet profile details"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet-transactions": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Get Wallet Transactions History",
+        "responses": {
+          "200": {
+            "description": "List of wallet transactions"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet-transactions/{transactionId}/metadata": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Get Transaction Metadata & IPFS Details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transactionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction metadata payload"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/session-status": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Check Wallet Session Status",
+        "responses": {
+          "200": {
+            "description": "Active wallet session status"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/create-session": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Create Live Wallet Session",
+        "responses": {
+          "200": {
+            "description": "Wallet session established"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/optin-txn": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Create Unsigned CTCoins Opt-In Txn",
+        "responses": {
+          "200": {
+            "description": "Unsigned base64 Algorand opt-in transaction"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/submit-optin": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Submit Signed CTCoins Opt-In Txn",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "signedTxn"
+                ],
+                "properties": {
+                  "signedTxn": {
+                    "type": "string",
+                    "description": "Base64 encoded signed transaction"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Opt-in transaction submitted and confirmed"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/retry-rewards": {
+      "post": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Retry Reward Distribution After Opt-In",
+        "responses": {
+          "200": {
+            "description": "Pending rewards retried"
+          }
+        }
+      }
+    },
+    "/wallet/asset-meta/{asaId}": {
+      "get": {
+        "tags": [
+          "Wallet & Blockchain"
+        ],
+        "summary": "Get Algorand ASA Asset Metadata",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asaId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ASA asset metadata"
+          }
+        }
+      }
+    },
+    "/api/v1/create-ctcoins": {
+      "post": {
+        "tags": [
+          "CTCoins (ASA)"
+        ],
+        "summary": "Create CTCoins ASA Asset (Admin)",
+        "responses": {
+          "200": {
+            "description": "CTCoins ASA created on Algorand"
+          }
+        }
+      }
+    },
+    "/api/v1/transfer-ctcoins": {
+      "post": {
+        "tags": [
+          "CTCoins (ASA)"
+        ],
+        "summary": "Transfer CTCoins (Reward Distribution)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "receiver_address",
+                  "amount"
+                ],
+                "properties": {
+                  "receiver_address": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "CTCoins transferred"
+          }
+        }
+      }
+    },
+    "/api/v1/redeem-ctcoins": {
+      "post": {
+        "tags": [
+          "CTCoins (ASA)"
+        ],
+        "summary": "Redeem CTCoins",
+        "responses": {
+          "200": {
+            "description": "CTCoins redemption request processed"
+          }
+        }
+      }
+    },
+    "/api/v1/asset/{asa_id}": {
+      "get": {
+        "tags": [
+          "CTCoins (ASA)"
+        ],
+        "summary": "Get Algorand ASA Details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asa_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset parameter details"
+          }
+        }
+      }
+    },
+    "/api/v1/asset/{asa_id}/expiry-status": {
+      "get": {
+        "tags": [
+          "CTCoins (ASA)"
+        ],
+        "summary": "Check Asset Expiry Status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asa_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Expiry status for ASA"
+          }
+        }
+      }
+    },
+    "/api/v1/redeem/preview": {
+      "post": {
+        "tags": [
+          "Redemption Engine"
+        ],
+        "summary": "Preview Token Redemption Calculation",
+        "responses": {
+          "200": {
+            "description": "Read-only redemption preview breakdown"
+          }
+        }
+      }
+    },
+    "/api/v1/redeem/eligibility": {
+      "post": {
+        "tags": [
+          "Redemption Engine"
+        ],
+        "summary": "Check Client Redemption Eligibility",
+        "responses": {
+          "200": {
+            "description": "Eligibility criteria and limits check"
+          }
+        }
+      }
+    },
+    "/api/v1/redeem/calc": {
+      "post": {
+        "tags": [
+          "Redemption Engine"
+        ],
+        "summary": "Calculate Token/Reward Redemption",
+        "responses": {
+          "200": {
+            "description": "Exact calculation results"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/initialize": {
+      "post": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Initialize Client Rewards Engine",
+        "responses": {
+          "200": {
+            "description": "Client reward account initialized"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/balance": {
+      "get": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Get Client Reward Balance",
+        "responses": {
+          "200": {
+            "description": "Available reward balances"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/claim-wallet": {
+      "post": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Claim Rewards to Connected Wallet",
+        "responses": {
+          "200": {
+            "description": "Rewards claimed to wallet"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/settle-pending": {
+      "post": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Settle Pending Client Rewards",
+        "responses": {
+          "200": {
+            "description": "Pending rewards settled"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/preview": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Preview CTCoin Reward Earning Quantity",
+        "description": "Calculate expected CTCoin rewards for a purchase based on carbon footprint (kg) and invoice value.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "carbon_footprint"
+                ],
+                "properties": {
+                  "carbon_footprint": {
+                    "type": "number",
+                    "example": 100
+                  },
+                  "invoice_value": {
+                    "type": "number",
+                    "example": 15000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reward estimation details"
+          },
+          "400": {
+            "description": "Invalid carbon footprint parameter"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Preview CTCoin Reward Earning Quantity (Query)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "carbon_footprint",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invoice_value",
+            "required": false,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward estimation details"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/verify-claim": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Public Reward Claim Verification",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "claim_id"
+                ],
+                "properties": {
+                  "claim_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Public claim token verified"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/claim-wallet-public": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Public Wallet Claim Execution",
+        "responses": {
+          "200": {
+            "description": "Reward claimed to public wallet"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/claim-optin-txn": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Public Claim Opt-In Txn Creation",
+        "responses": {
+          "200": {
+            "description": "Unsigned opt-in transaction"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/claim-submit-optin": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Public Submit Opt-In Txn",
+        "responses": {
+          "200": {
+            "description": "Signed opt-in submitted"
+          }
+        }
+      }
+    },
+    "/api/v1/rewards/settle-pending-public": {
+      "post": {
+        "tags": [
+          "Reward Distribution",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Public Settle Pending Rewards",
+        "responses": {
+          "200": {
+            "description": "Public pending rewards settled"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/retry-reward/{sale_order_id}": {
+      "post": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Manual Retry Reward (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reward distribution retried"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reward-status/{sale_order_id}": {
+      "get": {
+        "tags": [
+          "Reward Distribution"
+        ],
+        "summary": "Check Admin Reward Status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sale_order_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status of reward distribution"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/available": {
+      "get": {
+        "tags": [
+          "Projects",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Get Available Carbon Offset Projects",
+        "responses": {
+          "200": {
+            "description": "List of available projects for offset selection"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/active": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get Active Projects List",
+        "responses": {
+          "200": {
+            "description": "List of active projects"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/details": {
+      "get": {
+        "tags": [
+          "Projects",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Get Enriched Details for All Projects",
+        "responses": {
+          "200": {
+            "description": "Complete project breakdown and carbon metrics"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/all/details": {
+      "get": {
+        "tags": [
+          "Projects",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Alias: Get Enriched Details for All Projects",
+        "responses": {
+          "200": {
+            "description": "Complete project breakdown"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/details": {
+      "get": {
+        "tags": [
+          "Projects",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Get Single Project Details (for SDK Modal)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "projectId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single project details"
+          }
+        }
+      }
+    },
+    "/api/v1/carbon/charges": {
+      "post": {
+        "tags": [
+          "Carbon Calculation"
+        ],
+        "summary": "Calculate Carbon Offset Charges",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "carbon_footprint"
+                ],
+                "properties": {
+                  "carbon_footprint": {
+                    "type": "number",
+                    "example": 1250
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calculated carbon charge breakdown"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Get User Notifications",
+        "responses": {
+          "200": {
+            "description": "List of notifications"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Create New Notification (Admin/System)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "message"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notification created"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark Notification as Read",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification marked read"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark All Notifications as Read",
+        "responses": {
+          "200": {
+            "description": "All notifications marked read"
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{id}": {
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Delete Notification",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/inquiries": {
+      "get": {
+        "tags": [
+          "Inquiry Management"
+        ],
+        "summary": "List Contact Inquiries (Admin)",
+        "responses": {
+          "200": {
+            "description": "List of submitted inquiries"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Inquiry Management",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Submit Public Contact/Inquiry Form",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email",
+                  "message"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "company": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Inquiry submitted successfully"
+          }
+        }
+      }
+    },
+    "/api/v1/inquiries/{id}/status": {
+      "put": {
+        "tags": [
+          "Inquiry Management"
+        ],
+        "summary": "Update Inquiry Status (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "example": "Contacted"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inquiry status updated"
+          }
+        }
+      }
+    },
+    "/api/v1/inquiries/{id}/convert-to-client": {
+      "post": {
+        "tags": [
+          "Inquiry Management"
+        ],
+        "summary": "Convert Inquiry to Active Client (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inquiry converted to client account"
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Health Check Endpoint",
+        "responses": {
+          "200": {
+            "description": "Service operational status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "carbontrace-backend"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/razorpay": {
+      "post": {
+        "tags": [
+          "System, Settings & Logs",
+          "CT-SDK Integrations"
+        ],
+        "summary": "Razorpay Payment Webhook Receiver",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook event processed"
+          }
+        }
+      }
+    },
+    "/api/v1/email-logs": {
+      "get": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Fetch Email Logs (Admin)",
+        "responses": {
+          "200": {
+            "description": "Email delivery logs"
+          }
+        }
+      }
+    },
+    "/api/v1/email-logs/{id}/resend": {
+      "post": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Resend Failed Email (Admin)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email re-queued for sending"
+          }
+        }
+      }
+    },
+    "/api/v1/system-logs": {
+      "get": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Fetch System Logs (Admin)",
+        "responses": {
+          "200": {
+            "description": "System logs"
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Fetch Admin Settings JSON (Decoupled API)",
+        "responses": {
+          "200": {
+            "description": "Global admin settings payload"
+          }
+        }
+      }
+    },
+    "/api/v1/settings/test-email": {
+      "post": {
+        "tags": [
+          "System, Settings & Logs"
+        ],
+        "summary": "Test Email SMTP Configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email_to"
+                ],
+                "properties": {
+                  "email_to": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test email status"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Root / Login Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Login Page"
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Dashboard Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Dashboard Page"
+          }
+        }
+      }
+    },
+    "/accounts": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Accounts Overview Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Accounts Page"
+          }
+        }
+      }
+    },
+    "/activeprojects": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Active Projects Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Active Projects Page"
+          }
+        }
+      }
+    },
+    "/dashboard/listofclients": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "List of Clients Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Clients List Page"
+          }
+        }
+      }
+    },
+    "/dashboard/addclient": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Add Client Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Add Client Page"
+          }
+        }
+      }
+    },
+    "/adjusted-orders": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Adjusted Orders Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Adjusted Orders Page"
+          }
+        }
+      }
+    },
+    "/pending-orders": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Pending Orders Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Pending Orders Page"
+          }
+        }
+      }
+    },
+    "/failed-ucr-orders": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Failed UCR Orders Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Failed UCR Orders Page"
+          }
+        }
+      }
+    },
+    "/dashboard/wallet": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Wallet Dashboard Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Wallet Page"
+          }
+        }
+      }
+    },
+    "/email-logs": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Email Logs Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Email Logs Page"
+          }
+        }
+      }
+    },
+    "/inquiries": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Inquiries Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Inquiries Page"
+          }
+        }
+      }
+    },
+    "/system-logs": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "System Logs Page View",
+        "responses": {
+          "200": {
+            "description": "HTML System Logs Page"
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Admin Settings Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Settings Page"
+          }
+        }
+      }
+    },
+    "/rewards": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Rewards Main Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Rewards Page"
+          }
+        }
+      }
+    },
+    "/rewards/claim": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Rewards Claim Page View",
+        "responses": {
+          "200": {
+            "description": "HTML Rewards Claim Page"
+          }
+        }
+      }
+    },
+    "/billing/pay/{token}": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Public Billing Payment Page View",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML Billing Pay Page"
+          }
+        }
+      }
+    },
+    "/certificate/client/{clientId}": {
+      "get": {
+        "tags": [
+          "Web Views (EJS Renders)"
+        ],
+        "summary": "Client Certificate Page View",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML Certificate Page"
+          }
+        }
+      }
+    }
+  }
+}
