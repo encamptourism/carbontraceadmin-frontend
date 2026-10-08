@@ -500,11 +500,13 @@ export function PageHead({ title, sub, icon, back, children }) {
 }
 
 // Initials on a colour picked from the name, so the same client always gets the same colour.
-// `src` (a logo) shows instead when it loads; a missing file falls back to the initials.
+// `src` (a logo URL, or a list to try in order) shows instead when it loads; if none do, the initials.
 export function Avatar({ name = "?", size = 40, src }) {
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState(0);
+  const srcs = [src].flat().filter(Boolean);
+  // Wide wordmarks get up to twice the width instead of shrinking into a circle.
   // eslint-disable-next-line @next/next/no-img-element -- arbitrary client logos, unknown sizes
-  if (src && !failed) return <img src={src} alt="" width={size} height={size} className="avatar-logo" onError={() => setFailed(true)} />;
+  if (failed < srcs.length) return <img key={srcs[failed]} src={srcs[failed]} alt="" height={size} className="avatar-logo" style={{ height: size, maxWidth: size * 2 }} onError={() => setFailed(failed + 1)} />;
   const initials = String(name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
   let h = 0;
   for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360;
