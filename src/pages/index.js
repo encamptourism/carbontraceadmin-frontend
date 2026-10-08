@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useState } from "react";
 import { WalletCard } from "./wallet";
-import { CountUp, ErrorNote, Skeleton, Card, compact, DataTable, findArray, fmt, humanize, KeyValues, PageHead, useApi } from "@/lib/ui";
+import { CountUp, ErrorNote, Skeleton, Card, compact, DataTable, findArray, fmt, humanize, KeyValues, ORDER_STATUS, PageHead, useApi } from "@/lib/ui";
 
 const RANGES = [[7, "7D"], [30, "30D"], [90, "90D"], [365, "12M"]];
 
@@ -172,14 +172,18 @@ const SALES = [
   ["Adjusted", "/orders/adjusted"],
   ["Failed UCR", "/orders/failed-ucr"],
 ];
-// /salesRegisters reports a total, so one row is enough. The /orders/* lists send no total, so fetch
-// them whole and count rows. ponytail: 1000-row cap; ask the backend for a total if these lists grow.
-const ONE = { page: 1, limit: 1 };
+// The /orders/* lists send no total, so fetch them whole and count rows; when one comes back empty,
+// count the sales registers with that status instead. ponytail: 1000-row cap; ask the backend for totals.
 const ALL = { page: 1, limit: 1000 };
 
 function SalesCounts() {
-  const states = [useApi(SALES[0][1], ONE), useApi(SALES[1][1], ALL), useApi(SALES[2][1], ALL), useApi(SALES[3][1], ALL)];
-  const counts = states.map((st) => itemCount(st.data));
+  const states = [useApi(SALES[0][1], ALL), useApi(SALES[1][1], ALL), useApi(SALES[2][1], ALL), useApi(SALES[3][1], ALL)];
+  const registers = findArray(states[0].data);
+  const counts = states.map((st, i) => {
+    const n = itemCount(st.data);
+    const match = ORDER_STATUS[SALES[i][1]];
+    return match && !n && registers.length ? registers.filter((r) => match.test(String(r.status ?? ""))).length : n;
+  });
   const [, pending, adjusted] = counts;
   const share = pending != null && adjusted != null && pending + adjusted > 0 ? adjusted / (pending + adjusted) : null;
   return (
@@ -189,7 +193,7 @@ function SalesCounts() {
         {SALES.map(([label], i) => {
           const { loading, error } = states[i], n = counts[i];
           return (
-            <Link key={label} href={`/sales?tab=${i}`} className={`sales-row${i === 3 && n > 0 ? " bad" : ""}`}>
+            <Link key={label} href={i ? `/sales?tab=${SALES[i][1].split("/").pop()}` : "/sales"} className={`sales-row${i === 3 && n > 0 ? " bad" : ""}`}>
               <span>{label}</span>
               <strong title={error || (n == null && !loading ? "Count not in API response" : undefined)}>{loading ? "…" : error || n == null ? "—" : <CountUp value={n} />}</strong>
             </Link>

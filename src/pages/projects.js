@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useState } from "react";
 import { Card, findArray, fmt, humanize, PageHead, Tabs, useApi, ViewDialog } from "@/lib/ui";
 
-const TABS = [["All", "/projects/details"], ["Active", "/projects/active"], ["Available", "/projects/available"]];
+const TABS = ["All", "Active", "Inactive", "Available"];
 
 // Field names vary (project_type_name / projectTypeName / …), so look keys up loosely.
 const norm = (k) => k.toLowerCase().replace(/[^a-z]/g, "");
@@ -43,7 +43,7 @@ const Icon = ({ type, size = 20 }) => (
 const initials = (s) => s.split(/\s+/).filter((w) => /^[a-z]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 const isUrl = (v) => typeof v === "string" && /^https:\/\//.test(v);
 
-function ProjectCard({ p }) {
+function ProjectCard({ p, active }) {
   const [open, setOpen] = useState(false);
   const get = (f) => pick(p, ...FIELDS[f]);
   const typeText = get("type") || "";
@@ -61,6 +61,7 @@ function ProjectCard({ p }) {
     <article className={`project t-${type.toLowerCase()}`}>
       <div className="project-cover">
         <span className="type-badge"><Icon type={type} size={14} />{type}</span>
+        {active != null && <span className={`pill dot state-badge ${active ? "good" : ""}`}>{active ? "Active" : "Inactive"}</span>}
         {get("id") != null && <span className="project-id">#{get("id")}</span>}
         <span className="cover-icon"><Icon type={type} size={80} /></span>
       </div>
@@ -126,29 +127,51 @@ function ProjectCard({ p }) {
   );
 }
 
+const pid = (p) => String(pick(p, ...FIELDS.id));
+// Explicit status field wins; otherwise a project is active when /projects/active lists it.
+const activeOf = (p, activeIds) => {
+  const v = pick(p, "is_active", "isActive", "active", "status", "project_status");
+  return typeof v === "boolean" ? v : typeof v === "string" && v ? /^(active|true|1|live)$/i.test(v) : activeIds.has(pid(p));
+};
+
+const Grid = ({ items, activeIds }) => (
+  <div className="project-grid">{items.map((p, i) => <ProjectCard key={pick(p, ...FIELDS.id) ?? i} p={p} active={activeIds && activeOf(p, activeIds)} />)}</div>
+);
+
 export default function Projects() {
   const [tab, setTab] = useState(0);
   const [q, setQ] = useState("");
-  const list = useApi(TABS[tab][1]);
-  const all = findArray(list.data);
-  const shown = q ? all.filter((p) => JSON.stringify(Object.values(p)).toLowerCase().includes(q.toLowerCase())) : all;
+  const details = useApi("/projects/details");
+  const activeList = useApi("/projects/active");
+  const available = useApi(tab === 3 ? "/projects/available" : null);
+  const list = tab === 3 ? available : details.loading || details.error ? details : activeList;
+  const activeIds = new Set(findArray(activeList.data).map(pid));
+  // Every project: the full list plus any active one it doesn't include.
+  const known = new Set(findArray(details.data).map(pid));
+  const all = tab === 3 ? findArray(available.data) : [...findArray(details.data), ...findArray(activeList.data).filter((p) => !known.has(pid(p)))];
+  const match = (p) => !q || JSON.stringify(Object.values(p)).toLowerCase().includes(q.toLowerCase());
+  const shown = all.filter(match);
+  const act = shown.filter((p) => activeOf(p, activeIds));
+  const inact = shown.filter((p) => !activeOf(p, activeIds));
+  const sections = tab === 3 ? [["Available for offset selection", shown, null]]
+    : [["Active", act, activeIds], ["Inactive", inact, activeIds]].filter((_, i) => !tab || tab === i + 1);
 
   return (
     <>
       <Head><title>Projects · CarbonTrace</title></Head>
-      <PageHead title="Projects" sub="Carbon offset projects available to clients" icon="projects">
+      <PageHead title="Projects" sub="All carbon offset projects, active and inactive" icon="projects">
         <input className="search" type="search" placeholder="Search projects" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search projects" />
       </PageHead>
-      <Tabs tabs={TABS.map(([l]) => l)} value={tab} onChange={setTab} />
+      <Tabs tabs={tab === 3 ? TABS : TABS.map((l, i) => (i === 1 ? `${l} (${act.length})` : i === 2 ? `${l} (${inact.length})` : l))} value={tab} onChange={setTab} />
       {list.loading || list.error ? (
         <Card title="Projects" state={list} />
-      ) : shown.length ? (
-        <>
-          <p className="muted result-count">{shown.length} {shown.length === 1 ? "project" : "projects"}{q && ` matching “${q}”`}</p>
-          <div className="project-grid">{shown.map((p, i) => <ProjectCard key={pick(p, ...FIELDS.id) ?? i} p={p} />)}</div>
-        </>
       ) : (
-        <section className="card"><p className="empty">{q ? `No projects match “${q}”.` : "No projects."}</p></section>
+        sections.map(([title, items, ids]) => (
+          <section key={title} className="project-section">
+            <h2 className="section-h">{title} <span className="count">{items.length}</span></h2>
+            {items.length ? <Grid items={items} activeIds={ids} /> : <section className="card"><p className="empty">{q ? `No ${title.toLowerCase()} projects match “${q}”.` : `No ${title.toLowerCase()} projects.`}</p></section>}
+          </section>
+        ))
       )}
     </>
   );

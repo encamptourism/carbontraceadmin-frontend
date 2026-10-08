@@ -1,9 +1,19 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useState } from "react";
+import { api } from "@/lib/api";
 import { Avatar, Card, DataTable, Empty, Icon, PageHead, Pager, Skeleton, Tabs, Tiles, ago, findArray, pick, rowId, toneOf, useApi } from "@/lib/ui";
 
 const LIMIT = 20;
+const PERSONAL = /^(gmail|yahoo|outlook|hotmail|icloud|proton(mail)?|carbontrace)\./i;
+
+// Logo: the API's own field if it sends one, else public/clients/<email domain>.png (drop files there).
+const logoOf = (c, email) => {
+  const url = pick(c, /logo|avatar|image/i);
+  if (url) return url;
+  const domain = String(email || "").split("@")[1]?.toLowerCase();
+  return domain && !PERSONAL.test(domain) ? `/clients/${domain}.png` : undefined;
+};
 
 function ClientCard({ c }) {
   const name = pick(c, /^(name|companyName|company|clientName)$/i) || "Unnamed client";
@@ -15,7 +25,7 @@ function ClientCard({ c }) {
   return (
     <Link href={`/accounts/${rowId(c)}`} className="client-card">
       <div className="client-top">
-        <Avatar name={name} size={44} />
+        <Avatar name={name} size={44} src={logoOf(c, email)} />
         <div className="client-name">
           <strong>{name}</strong>
           {since && <small>Client {ago(since)}</small>}
@@ -51,7 +61,7 @@ export default function Accounts() {
 
       {tab ? (
         <Card title="Confirmed transactions" icon="check" state={audit}>
-          <DataTable rows={findArray(audit.data)} empty="No confirmed transactions." />
+          <DataTable rows={findArray(audit.data)} name="Confirmed-transactions" empty="No confirmed transactions." />
         </Card>
       ) : (
         <>
@@ -72,7 +82,7 @@ export default function Accounts() {
             : view === "grid" ? <div className="client-grid">{rows.map((c) => <ClientCard key={rowId(c)} c={c} />)}</div>
             : (
               <Card title="Clients" state={clients}>
-                <DataTable rows={rows} action={(r) => <Link className="btn" href={`/accounts/${rowId(r)}`}>View</Link>} />
+                <DataTable rows={rows} name="Clients" exportRows={async () => findArray(await api("/accounts/clients", { page: 1, limit: 1000, ...(q && { q }) }))} action={(r) => <Link className="btn" href={`/accounts/${rowId(r)}`}>View</Link>} />
               </Card>
             )}
           <Pager page={page} setPage={setPage} data={clients.data} rows={rows} limit={LIMIT} />

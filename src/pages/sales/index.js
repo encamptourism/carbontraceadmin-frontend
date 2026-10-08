@@ -2,15 +2,26 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { ActionButton, Card, DataTable, findArray, FormDialog, PageHead, Pager, rowId, Tabs, useApi } from "@/lib/ui";
+import { api } from "@/lib/api";
+import { ActionButton, ORDER_STATUS, Card, DataTable, findArray, FormDialog, PageHead, Pager, rowId, Tabs, useApi } from "@/lib/ui";
 
+// [label, endpoint]. ?tab= takes the endpoint's last segment.
 const TABS = [
   ["All sales", "/salesRegisters"],
-  ["Pending", "/orders/pending"],
   ["Adjusted", "/orders/adjusted"],
+  ["Pending", "/orders/pending"],
   ["Failed UCR", "/orders/failed-ucr"],
 ];
+const FAILED = 3;
 const LIMIT = 20;
+
+// Sale date first, then order id, booking id (N/A until the Eccamo CRM link lands), client id, the rest.
+const LEAD = [/^sale_?date$/i, /^sale_?order_?id$/i, /^booking_?id$/i, /^client_?id$/i];
+const shape = (r) => {
+  const e = Object.entries({ booking_id: "N/A", ...r });
+  const rank = ([k]) => { const i = LEAD.findIndex((re) => re.test(k)); return i < 0 ? LEAD.length : i; };
+  return Object.fromEntries(e.sort((a, b) => rank(a) - rank(b)));
+};
 
 // ponytail: lot id field name guessed; fix once a real failed-ucr row is seen.
 const lotId = (r) => r.lotId || r.lot_id || r.ucr_lot_id || rowId(r);
@@ -18,15 +29,22 @@ const lotId = (r) => r.lotId || r.lot_id || r.ucr_lot_id || rowId(r);
 export default function Sales() {
   // The tab lives in ?tab=N so dashboard tiles can link straight to it.
   const router = useRouter();
-  const tab = Math.min(Number(router.query.tab) || 0, TABS.length - 1);
-  const setTab = (t) => router.replace({ query: t ? { tab: t } : {} }, undefined, { shallow: true });
+  const tab = Math.max(0, TABS.findIndex(([, p]) => p.endsWith(`/${router.query.tab}`)));
+  const setTab = (t) => router.replace({ query: t ? { tab: TABS[t][1].split("/").pop() } : {} }, undefined, { shallow: true });
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({});
   const [label, path] = TABS[tab];
+  const match = ORDER_STATUS[path];
   const isAll = tab === 0;
+  const params = isAll && Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
 
-  const list = useApi(path, { page, limit: LIMIT, ...(isAll && Object.fromEntries(Object.entries(filters).filter(([, v]) => v))) });
-  const rows = findArray(list.data);
+  const primary = useApi(path, { page, limit: LIMIT, ...params });
+  // Empty /orders/* list → filter the registers by status instead. ponytail: 1000-row cap.
+  const fallback = useApi(match && primary.data && !findArray(primary.data).length ? "/salesRegisters" : null, { limit: 1000 });
+  const usingFallback = !!(match && fallback.data);
+  const list = usingFallback ? fallback : primary;
+  const rows = (usingFallback ? findArray(fallback.data).filter((r) => match.test(String(r.status ?? ""))) : findArray(list.data)).map(shape);
+  const exportRows = async () => (usingFallback ? rows : findArray(await api(path, { page: 1, limit: 1000, ...params })).map(shape));
   const clients = useApi("/accounts/clients", { limit: 200 });
   const projects = useApi("/projects/details");
   const clientOptions = findArray(clients.data).map((c) => [rowId(c), c.name ? `${c.name}${c.email ? ` (${c.email})` : ""}` : rowId(c)]);
@@ -72,8 +90,10 @@ export default function Sales() {
       <Card title={label} state={list}>
         <DataTable
           rows={rows}
-          empty={`No ${label.toLowerCase()}.`}
-          action={(r) => (tab === 3 ? (
+          name={`Sales-${label}`}
+          exportRows={exportRows}
+          empty={`No ${label.toLowerCase()} orders.`}
+          action={(r) => (tab === FAILED ? (
             <>
               <Link className="btn" href={`/sales/lot/${encodeURIComponent(lotId(r))}`}>Details</Link>
               <ActionButton label="Retry" path={`/ucr/failed-lots/${encodeURIComponent(lotId(r))}/retry`} onDone={list.reload} />
@@ -95,7 +115,7 @@ export default function Sales() {
             />
           ))}
         />
-        <Pager page={page} setPage={setPage} data={list.data} rows={rows} limit={LIMIT} />
+        {!usingFallback && <Pager page={page} setPage={setPage} data={list.data} rows={findArray(list.data)} limit={LIMIT} />}
       </Card>
     </>
   );

@@ -3,15 +3,28 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
 // Response shapes aren't in the swagger, so these render whatever comes back.
-export const humanize = (k) => k.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+export const humanize = (k) => k.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase()).replace(/\b(id|ucr|ct|url|gst|pan|tx)\b/gi, (w) => w.toUpperCase());
 
-export const findArray = (d) => (Array.isArray(d) ? d : Object.values(d || {}).find(Array.isArray) || []);
+// The list in a response: the first non-empty array of objects, looking one level into nested objects too.
+export const findArray = (d) => {
+  if (Array.isArray(d)) return d;
+  const vals = Object.values(d || {});
+  const arrays = [...vals, ...vals.flatMap((v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.values(v) : []))].filter(Array.isArray);
+  return arrays.find((a) => a.length && typeof a[0] === "object") || arrays[0] || [];
+};
 
 export const rowId = (r) => r._id ?? r.id;
 
+// Sales-register statuses behind the /orders/{adjusted,pending} lists. Those endpoints come back
+// empty, so Sales and the dashboard fall back to these. ponytail: drop once the backend fills them.
+export const ORDER_STATUS = {
+  "/orders/adjusted": /^adjusted$/i,
+  "/orders/pending": /pending|partial|ready|not.?started/i,
+};
+
 export const fmt = (v) =>
   typeof v === "number" ? v.toLocaleString("en-IN")
-  : typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v) ? new Date(v).toLocaleDateString("en-IN")
+  : typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v) ? new Date(v).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
   : v && typeof v === "object" ? JSON.stringify(v)
   : String(v ?? "—");
 
@@ -39,14 +52,20 @@ const leaves = (obj, keep, prefix = "") =>
 const SECRET = /pass|secret|token|api.?key|private|mnemonic/i;
 
 export function useApi(path, params) {
-  const [state, setState] = useState({ loading: true });
+  const [state, setState] = useState({});
   const [tick, setTick] = useState(0);
   const key = JSON.stringify(params);
+  const req = `${path}?${key}`;
   useEffect(() => {
     if (!path) return;
-    api(path, params).then((data) => setState({ data }), (error) => setState({ error: error.message }));
+    let live = true;
+    api(path, params).then((data) => live && setState({ req, data }), (error) => live && setState({ req, error: error.message }));
+    return () => { live = false; };
   }, [path, key, tick]); // eslint-disable-line react-hooks/exhaustive-deps
-  return { ...state, reload: () => setTick((t) => t + 1) };
+  // Only the answer to the current request counts: a disabled call (no path) has no data, and
+  // switching path/params shows loading instead of the previous request's rows.
+  const { req: _, ...current } = state.req === req ? state : path ? { loading: true } : {};
+  return { ...current, reload: () => setTick((t) => t + 1) };
 }
 
 // Shimmer placeholder lines shown while data loads.
@@ -112,35 +131,96 @@ export function Tiles({ data }) {
 // Status words get a tone; the word itself stays visible so color is never the only cue.
 const tone = (v) =>
   /fail|error|overdue|cancel|reject|expired/i.test(v) ? "bad"
-  : /pending|processing|draft|due|partial|queued|new/i.test(v) ? "warn"
-  : /paid|complete|success|active|confirmed|issued|settled|sent|ok/i.test(v) ? "good"
+  : /pending|processing|draft|due|partial|queued|new|ready|not.?started/i.test(v) ? "warn"
+  : /paid|complete|success|active|confirmed|issued|settled|sent|ok|adjusted/i.test(v) ? "good"
   : "";
 
+const NA = /^(n\/?a|—|-|null|undefined)?$/i;
+const isMono = (k) => /(^|_|\b)id$|Id$|serial|hash|address|^tx/i.test(k);
 const Cell = ({ k, v }) =>
-  /status|state/i.test(k) && typeof v === "string" ? <span className={`pill ${tone(v)}`}>{v}</span> : fmt(v);
+  v == null || NA.test(String(v)) ? <span className="cell-na">N/A</span>
+  : /status|state/i.test(k) && typeof v === "string" ? <span className={`pill dot ${tone(v)}`}>{v.replace(/[-_]+/g, " ").toLowerCase().replace(/^./, (c) => c.toUpperCase())}</span>
+  : fmt(v);
 
-// Columns = scalar keys of the first row (max 8). `action` renders an extra last cell.
-export function DataTable({ rows, empty = "No records.", action }) {
-  if (!rows.length) return <p className="empty">{empty}</p>;
-  const cols = Object.keys(rows[0]).filter((k) => typeof rows[0][k] !== "object" && !/^(_?id|__v|password|token|secret)$|^(password|token|secret)/i.test(k)).slice(0, 8);
-  // Column that heads each row's card on phones (CSS moves it to the top).
+const visibleKeys = (rows) => [...new Set(rows.flatMap(Object.keys))].filter((k) => rows.some((r) => r[k] != null && typeof r[k] !== "object") && !/^(_?id|__v)$|pass|token|secret/i.test(k));
+
+// Spreadsheet-safe CSV of every scalar column (not just the visible ones). BOM so Excel reads UTF-8.
+export function downloadCsv(rows, name) {
+  const cols = visibleKeys(rows);
+  const cell = (v) => {
+    const s = typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v) ? v.slice(0, 10) : v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [cols.map(humanize), ...rows.map((r) => cols.map((c) => r[c]))].map((line) => line.map(cell).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `${(name || document.title.split(" · ")[0] || "export").replace(/[^\w-]+/g, "-")}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+const PAGE = 25;
+
+// Columns = scalar keys across the rows (max 10). `action` renders an extra last cell.
+// Over 25 rows pages locally; the footer always offers a CSV download. `exportRows` (async → rows)
+// lets server-paginated lists download everything, not just the page on screen.
+export function DataTable({ rows, empty = "No records.", action, exportRows, name }) {
+  const [page, setPage] = useState(1);
+  const [busy, setBusy] = useState(false);
+  if (!rows.length) return <Empty title={empty} />;
+  const cols = visibleKeys(rows).slice(0, 10);
+  const isNum = (c) => rows.some((r) => typeof r[c] === "number");
+  // Column that heads each row: bold, and first on phones.
   const title = cols.find((c) => /order|invoice|name|title|number/i.test(c)) || cols[0];
+  const pages = Math.ceil(rows.length / PAGE);
+  const p = Math.min(page, pages);
+  const shown = rows.slice((p - 1) * PAGE, p * PAGE);
+  async function download() {
+    setBusy(true);
+    try { downloadCsv(exportRows ? await exportRows() : rows, name); }
+    catch (e) { alert(`Download failed: ${e.message}`); }
+    setBusy(false);
+  }
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr>{cols.map((c) => <th key={c} className={typeof rows[0][c] === "number" ? "num" : ""}>{humanize(c)}</th>)}{action && <th />}</tr></thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={rowId(r) || i}>
-              {cols.map((c) => <td key={c} data-label={humanize(c)} className={[typeof r[c] === "number" && "num", c === title && "cell-title"].filter(Boolean).join(" ") || undefined}><Cell k={c} v={r[c]} /></td>)}
-              {action && <td className="row-actions">{action(r)}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="data-table">
+      <div className="table-wrap">
+        <table>
+          <thead><tr>{cols.map((c) => <th key={c} scope="col" className={isNum(c) ? "num" : ""}>{humanize(c)}</th>)}{action && <th><span className="sr-only">Actions</span></th>}</tr></thead>
+          <tbody>
+            {shown.map((r, i) => (
+              <tr key={rowId(r) || i}>
+                {cols.map((c) => (
+                  <td key={c} data-label={humanize(c)} title={isMono(c) && r[c] != null ? String(r[c]) : undefined}
+                    className={[isNum(c) && "num", c === title && "cell-title", isMono(c) && c !== title && "cell-mono"].filter(Boolean).join(" ") || undefined}>
+                    <Cell k={c} v={r[c]} />
+                  </td>
+                ))}
+                {action && <td className="row-actions">{action(r)}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-foot">
+        <span className="muted">
+          {pages > 1 ? <>Showing <b>{(p - 1) * PAGE + 1}–{Math.min(p * PAGE, rows.length)}</b> of <b>{rows.length}</b></> : <><b>{rows.length}</b> {rows.length === 1 ? "record" : "records"}</>}
+        </span>
+        <div className="table-foot-actions">
+          {pages > 1 && <PagerButtons page={p} pages={pages} setPage={setPage} />}
+          <button type="button" className="btn btn-icon" onClick={download} disabled={busy}><Icon name="download" size={15} />{busy ? "Preparing…" : "Download CSV"}</button>
+        </div>
+      </div>
     </div>
   );
 }
+
+const PagerButtons = ({ page, pages, setPage, hasNext = page < pages }) => (
+  <div className="pager-btns">
+    <button type="button" className="btn btn-icon" disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="Previous page"><Icon name="back" size={15} />Prev</button>
+    <span className="pager-page">Page <b>{page}</b>{pages ? <> of <b>{pages}</b></> : ""}</span>
+    <button type="button" className="btn btn-icon" disabled={!hasNext} onClick={() => setPage(page + 1)} aria-label="Next page">Next<Icon name="arrow" size={15} /></button>
+  </div>
+);
 
 // Scalar fields as a definition list; secret-looking keys are masked.
 export function KeyValues({ data, empty = "Nothing to show." }) {
@@ -166,13 +246,8 @@ export function Tabs({ tabs, value, onChange }) {
 export function Pager({ page, setPage, data, rows, limit }) {
   const pages = pageCount(data);
   const hasNext = pages ? page < pages : rows.length === limit;
-  if (page === 1 && !hasNext) return null;
   return (
-    <div className="pager">
-      <button className="btn" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
-      <span className="muted">Page {page}{pages ? ` of ${pages}` : ""}</span>
-      <button className="btn" disabled={!hasNext} onClick={() => setPage(page + 1)}>Next</button>
-    </div>
+    <div className="pager"><PagerButtons page={page} pages={pages} setPage={setPage} hasNext={hasNext} /></div>
   );
 }
 
@@ -425,7 +500,11 @@ export function PageHead({ title, sub, icon, back, children }) {
 }
 
 // Initials on a colour picked from the name, so the same client always gets the same colour.
-export function Avatar({ name = "?", size = 40 }) {
+// `src` (a logo) shows instead when it loads; a missing file falls back to the initials.
+export function Avatar({ name = "?", size = 40, src }) {
+  const [failed, setFailed] = useState(false);
+  // eslint-disable-next-line @next/next/no-img-element -- arbitrary client logos, unknown sizes
+  if (src && !failed) return <img src={src} alt="" width={size} height={size} className="avatar-logo" onError={() => setFailed(true)} />;
   const initials = String(name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
   let h = 0;
   for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) % 360;
