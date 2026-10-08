@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { post } from "@/lib/api";
-import { Result } from "@/lib/ui";
+import { Result, Logo } from "@/lib/ui";
 
 // ponytail: only verify-claim's body is documented; the other claim calls are sent { claim_id, wallet_address, signedTxn } as relevant.
 function Step({ n, title, desc, children, done }) {
@@ -50,7 +50,7 @@ export default function Claim() {
   return (
     <main className="public-shell">
       <Head><title>Claim rewards · CarbonTrace</title></Head>
-      <div className="public-brand"><span className="logo" aria-hidden>●</span>CarbonTrace</div>
+      <div className="public-brand"><Logo height={40} /></div>
       <section className="card public-card wide">
         <h1>Claim your CTCoin rewards</h1>
         <p className="muted">Rewards earned from your carbon offsets, delivered to your Algorand wallet.</p>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PUBLIC_ROUTES, isAuthed, logout } from "@/lib/api";
-import { Icon } from "@/lib/ui";
+import { Icon, Logo, LogoMark } from "@/lib/ui";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 
@@ -51,8 +51,8 @@ export default function App({ Component, pageProps }) {
       <aside className="sidebar">
         <div className="sidebar-top">
           <Link href="/" className="brand" aria-label="CarbonTrace home">
-            <span className="brand-mark" aria-hidden><Icon name="leaf" size={16} /></span>
-            <span className="brand-text">CarbonTrace</span>
+            <Logo height={40} className="logo-full" />
+            <LogoMark size={32} />
           </Link>
           <button className="menu-btn" aria-expanded={menuOpen} aria-controls="main-nav" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen(!menuOpen)}>
             <span className={`burger${menuOpen ? " open" : ""}`} aria-hidden><i /><i /><i /></span>

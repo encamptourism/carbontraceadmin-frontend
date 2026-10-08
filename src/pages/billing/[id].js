@@ -1,7 +1,7 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { ActionButton, DataTable, ErrorNote, Icon, KeyValues, PageHead, Skeleton, humanize, pick, toneOf, useApi } from "@/lib/ui";
+import { Logo, ActionButton, DataTable, ErrorNote, Icon, KeyValues, PageHead, Skeleton, humanize, pick, toneOf, useApi } from "@/lib/ui";
 
 const pickToken = (b) => b?.publicToken || b?.public_token || b?.paymentToken || b?.payment_token || b?.token;
 const money = (v) => `₹${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -50,7 +50,7 @@ export default function BillingDetail() {
                 <h1>{number}</h1>
                 {status && <span className={`pill ${toneOf(status)}`}>{String(status)}</span>}
               </div>
-              <div className="invoice-brand"><span className="brand-mark"><Icon name="leaf" size={16} /></span>CarbonTrace</div>
+              <div className="invoice-brand"><Logo height={36} /></div>
             </header>
 
             <div className="invoice-parties">

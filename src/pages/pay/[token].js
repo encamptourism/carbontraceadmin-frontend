@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { post } from "@/lib/api";
-import { DataTable, KeyValues, useApi } from "@/lib/ui";
+import { DataTable, KeyValues, useApi, Logo } from "@/lib/ui";
 
 const first = (o, ...keys) => keys.map((k) => o?.[k]).find((v) => v != null && v !== "");
 const inr = (v) => Number(v).toLocaleString("en-IN", { style: "currency", currency: "INR" });
@@ -44,7 +44,7 @@ export default function Pay() {
         name: "CarbonTrace",
         description: first(b, "invoiceNumber", "invoice_number") ? `Invoice ${first(b, "invoiceNumber", "invoice_number")}` : "Invoice payment",
         prefill: { name: first(b, "clientName", "client_name"), email: first(b, "clientEmail", "client_email", "email") },
-        theme: { color: "#1f8a5b" },
+        theme: { color: "#34843f" },
         modal: { ondismiss: () => setPay({}) },
         handler: async (r) => {
           setPay({ busy: true, verifying: true });
@@ -69,7 +69,7 @@ export default function Pay() {
   return (
     <main className="public-shell">
       <Head><title>Pay invoice · CarbonTrace</title></Head>
-      <div className="public-brand"><span className="logo" aria-hidden>●</span>CarbonTrace</div>
+      <div className="public-brand"><Logo height={40} /></div>
       <section className="card public-card">
         {bill.loading ? <p className="muted">Loading invoice…</p> : bill.error ? (
           <>

@@ -2,6 +2,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { login } from "@/lib/api";
+import { Logo } from "@/lib/ui";
 
 export default function Login() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function Login() {
       <Head><title>Sign in · CarbonTrace</title></Head>
 
       <aside className="login-hero">
-        <div className="brand"><span className="logo" aria-hidden>●</span>CarbonTrace</div>
+        <Logo height={44} variant="white" />
         <div>
           <h2>Track every tonne, from project to payout.</h2>
           <ul>
@@ -43,7 +44,7 @@ export default function Login() {
 
       <main className="login-main">
         <form onSubmit={onSubmit} onChange={() => error && setError("")} aria-busy={busy}>
-          <div className="brand login-mobile-brand"><span className="logo" aria-hidden>●</span>CarbonTrace</div>
+          <div className="login-mobile-brand"><Logo height={40} /></div>
           <header>
             <h1>Welcome back</h1>
             <p className="muted">Sign in to the admin console.</p>

@@ -489,3 +489,21 @@ export function Menu({ label = "More", children }) {
     </details>
   );
 }
+
+// Official CarbonTrace logo (public/brand). "auto" swaps to the white-text version in dark mode;
+// "white" is for green/photo backgrounds. Logo is 642×171.
+export function Logo({ height = 32, variant = "auto", className = "" }) {
+  // eslint-disable-next-line @next/next/no-img-element -- small static logo inside <picture>; next/image can't do the dark-mode swap
+  const img = <img src={`/brand/${variant === "white" ? "logo-white" : "logo"}.png`} alt="CarbonTrace" height={height} width={Math.round((height * 642) / 171)} className={`logo-img ${className}`} style={{ "--logo-h": `${height}px` }} />;
+  if (variant === "white") return img;
+  return (
+    <picture>
+      <source srcSet="/brand/logo-dark.png" media="(prefers-color-scheme: dark)" />
+      {img}
+    </picture>
+  );
+}
+
+// Leaves only, for tight spots (collapsed sidebar).
+// eslint-disable-next-line @next/next/no-img-element -- tiny static mark
+export const LogoMark = ({ size = 30, className = "" }) => <img src="/brand/mark.png" alt="CarbonTrace" width={size} height={size} className={`logo-mark ${className}`} />;
